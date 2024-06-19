@@ -1,13 +1,20 @@
 use bevy::prelude::*;
+use noise::NoiseGeneratorSettings;
 
 use crate::{material::UpdateMountainMaterial, settings::MountainShadowSlope, textures::{MountainTexture, MountainTextures}};
 
 pub mod noise;
 
-#[derive(Resource, Clone, Default)]
+#[derive(Reflect, Resource, Clone)]
+#[reflect(Resource)]
 pub enum GenerationStrategy {
-    #[default]
-    Noise,
+    Noise(NoiseGeneratorSettings),
+}
+
+impl Default for GenerationStrategy {
+    fn default() -> Self {
+        Self::Noise(NoiseGeneratorSettings::default())
+    }
 }
 
 pub fn generate_maps(
@@ -20,7 +27,7 @@ pub fn generate_maps(
     let mut textures = MountainTextures::new(256, 256);
 
     match *strategy {
-        GenerationStrategy::Noise => noise::generate_heights(&mut textures.heightmap)
+        GenerationStrategy::Noise(ref settings) => noise::generate_heights(&mut textures.heightmap, settings),
     }
 
     generate_gradients(&textures.heightmap, &mut textures.gradients_x, &mut textures.gradients_y);

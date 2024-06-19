@@ -3,9 +3,10 @@
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use heights::{generate_maps, GenerationStrategy};
-use material::{MountainMaterial, MountainMaterialPlugin};
+use material::{MountainMaterial, MountainMaterialPlugin, UpdateMountainMaterial};
 use settings::MountainShadowSlope;
 
 mod material;
@@ -18,10 +19,16 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(MountainMaterialPlugin)
+
         .init_resource::<GenerationStrategy>()
         .init_resource::<MountainShadowSlope>()
-        .add_systems(Startup, setup)
-        .add_systems(Startup, generate_maps)
+        .register_type::<GenerationStrategy>()
+        .register_type::<MountainShadowSlope>()
+
+        .add_plugins(ResourceInspectorPlugin::<GenerationStrategy>::default())
+
+        .add_systems(Startup, (setup, generate_maps))
+        .add_systems(Update, regenerate_on_enter)
         .run();
 }
 
@@ -64,6 +71,25 @@ fn setup(
         transform: Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, 0.0, -0.1, 0.0)),
         ..default()
     });
+}
+
+fn regenerate_on_enter(
+    commands: Commands,
+    images: ResMut<Assets<Image>>,
+    strategy: Res<GenerationStrategy>,
+    update_material_evw: EventWriter<UpdateMountainMaterial>,
+    shadow_slope: Res<MountainShadowSlope>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    if keys.just_pressed(KeyCode::Enter) {
+        generate_maps(
+            commands,
+            images,
+            strategy,
+            update_material_evw,
+            shadow_slope,
+        );
+    }
 }
 
 

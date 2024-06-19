@@ -1,4 +1,4 @@
-use bevy::{prelude::Resource, reflect::Reflect, render::render_resource::ShaderType};
+use bevy::{prelude::{ReflectResource, Resource}, reflect::Reflect, render::render_resource::ShaderType};
 
 #[derive(Debug, Clone, Reflect, ShaderType)]
 pub struct MountainRenderSettings {
@@ -13,7 +13,8 @@ impl Default for MountainRenderSettings {
     }
 }
 
-#[derive(Resource, Clone)]
+#[derive(Reflect, Resource, Clone)]
+#[reflect(Resource)]
 pub struct MountainShadowSlope(pub f32);
 
 impl Default for MountainShadowSlope {
