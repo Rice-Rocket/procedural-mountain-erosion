@@ -18,7 +18,8 @@ var map: texture_2d<f32>;
 var map_sampler: sampler;
 
 struct MountainRenderSettings {
-    shadow_attenuation: f32,
+    sun_direction: vec3<f32>,
+    terrain_height: f32,
 }
 
 
@@ -34,25 +35,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     var model = mesh_functions::get_model_matrix(vertex.instance_index);
 #endif
 
-    let position = vertex.position + vec3(0.0, height, 0.0);
+    let position = vertex.position + vec3(0.0, height * settings.terrain_height, 0.0);
     var out: VertexOutput;
 
     out.world_position = mesh_functions::mesh_position_local_to_world(model, vec4<f32>(position, 1.0));
     out.position = position_world_to_clip(out.world_position.xyz);
 
-#ifdef VERTEX_UVS
-#ifdef SKINNED
-    out.world_normal = skinning::skin_normals(model, vertex.normal);
-#else
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(vertex.normal, vertex.instance_index);
-#endif
-#endif
-
     out.uv = vertex.uv;
-
-#ifdef VERTEX_TANGENTS
-    out.world_tangent = mesh_functions::mesh_tangent_local_to_world(model, vertex.tangent, vertex.instance_index);
-#endif
 
 #ifdef VERTEX_COLORS
     out.color = vertex.color;
@@ -72,16 +61,18 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
     let sample = textureSample(map, map_sampler, uv);
     let terrain_height = sample.x;
-    let shadow_height = sample.y;
+    var shadow = sample.y;
 
     let gradient = sample.zw;
     let steepness = length(gradient);
-    let normal = vec3(gradient.x, -1.0, gradient.y) / steepness;
+    let normal = normalize(vec3(gradient.x, 1.0, gradient.y));
+
+    shadow = max(shadow, max(dot(normal, settings.sun_direction), 0.0));
+    shadow = min(shadow, 0.9);
 
     var col = vec3(1.0);
 
-    let directional_shadow = f32(shadow_height > terrain_height) * (shadow_height - terrain_height) * settings.shadow_attenuation;
-    col = mix(col, vec3(0.0), directional_shadow);
+    col = mix(col, vec3(0.0), shadow);
 
     return vec4(col, 1.0);
 }

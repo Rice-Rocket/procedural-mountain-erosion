@@ -8,7 +8,7 @@ pub struct MountainTexturesRaw {
     pub map: Handle<Image>,
 }
 
-#[derive(Clone)]
+#[derive(Resource, Clone)]
 pub struct MountainTextures {
     pub heightmap: MountainTexture,
     pub shadowmap: MountainTexture,
@@ -26,9 +26,9 @@ impl MountainTextures {
         }
     }
 
-    pub fn into_raw(
-        self,
-        mut images: ResMut<Assets<Image>>,
+    pub fn as_raw(
+        &self,
+        images: &mut Assets<Image>,
     ) -> MountainTexturesRaw {
         let mut im = Image::new(
             Extent3d {

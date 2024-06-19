@@ -6,8 +6,6 @@ use bevy_inspector_egui::InspectorOptions;
 #[derive(Reflect, Clone, InspectorOptions)]
 pub struct NoiseGeneratorSettings {
     pub num_octaves: u32,
-    #[inspector(min = 0.0, speed = 0.05)]
-    pub strength: f32,
     #[inspector(min = 0.0, speed = 0.025)]
     pub roughness: f32,
     #[inspector(min = 0.0, speed = 0.025)]
@@ -22,8 +20,7 @@ impl Default for NoiseGeneratorSettings {
     fn default() -> Self {
         NoiseGeneratorSettings {
             num_octaves: 8,
-            strength: 40.0,
-            roughness: 0.005,
+            roughness: 1.4,
             lacunarity: 5.0,
             persistence: 0.2,
             offset: 0.0,
@@ -37,20 +34,23 @@ pub fn generate_heights(
     settings: &NoiseGeneratorSettings,
 ) {
     let noise = NoiseSimplex2d::new(0);
+    let width = map.width();
+    let height = map.height();
 
     for (x, y, px) in map.enumerate_pixels_mut() {
+        let uv = Vec2::new(x as f32 / width as f32, y as f32 / height as f32);
         let mut noise_val = 0.0;
         let mut f = settings.roughness;
         let mut amp = 1.0;
 
         for _ in 0..settings.num_octaves {
-            let v = noise.evaluate(Vec2::new(x as f32, y as f32) * f + settings.center);
+            let v = noise.evaluate(uv * f + settings.center);
             noise_val += (v + 1.0) * 0.5 * amp;
             f *= settings.lacunarity;
             amp *= settings.persistence;
         }
 
-        *px = noise_val * settings.strength - settings.offset;
+        *px = (noise_val - settings.offset).clamp(0.0, 1.0);
     }
 }
 

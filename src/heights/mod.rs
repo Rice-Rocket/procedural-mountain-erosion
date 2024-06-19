@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use noise::NoiseGeneratorSettings;
 
-use crate::{material::UpdateMountainMaterial, settings::MountainShadowSlope, textures::{MountainTexture, MountainTextures}};
+use crate::{material::UpdateMountainMaterial, settings::MountainShadowSettings, textures::MountainTextures};
 
 pub mod noise;
 
@@ -19,55 +19,78 @@ impl Default for GenerationStrategy {
 
 pub fn generate_maps(
     mut commands: Commands,
-    images: ResMut<Assets<Image>>,
+    mut images: ResMut<Assets<Image>>,
     strategy: Res<GenerationStrategy>,
     mut update_material_evw: EventWriter<UpdateMountainMaterial>,
-    shadow_slope: Res<MountainShadowSlope>,
+    shadow_settings: Res<MountainShadowSettings>,
+    mut textures: ResMut<MountainTextures>,
 ) {
-    let mut textures = MountainTextures::new(256, 256);
-
     match *strategy {
         GenerationStrategy::Noise(ref settings) => noise::generate_heights(&mut textures.heightmap, settings),
     }
 
-    generate_gradients(&textures.heightmap, &mut textures.gradients_x, &mut textures.gradients_y);
-    generate_shadows(&textures.heightmap, &mut textures.shadowmap, shadow_slope.0);
+    generate_gradients(textures.as_mut());
+    generate_shadows(textures.as_mut(), shadow_settings.as_ref());
 
-    commands.insert_resource(textures.into_raw(images));
+    commands.insert_resource(textures.as_raw(images.as_mut()));
     update_material_evw.send(UpdateMountainMaterial);
 }
 
 fn generate_gradients(
-    heights: &MountainTexture,
-    gradients_x: &mut MountainTexture,
-    gradients_y: &mut MountainTexture,
+    textures: &mut MountainTextures,
 ) {
-    for ((x, y, gx), gy) in gradients_x.enumerate_pixels_mut().zip(gradients_y.pixels_mut()) {
-        let height = heights[(x, y)];
-        let north = if y + 1 < heights.height() { heights[(x, y + 1)] } else { height };
-        let south = if y >= 1 { heights[(x, y - 1)] } else { height };
-        let east = if x + 1 < heights.width() { heights[(x + 1, y)] } else { height };
-        let west = if x >= 1 { heights[(x - 1, y)] } else { height };
+    for x in 0..textures.heightmap.width() {
+        for y in 0..textures.heightmap.height() {
+            let height = textures.heightmap[(x, y)];
+            let north = if y + 1 < textures.heightmap.height() { textures.heightmap[(x, y + 1)] } else { height };
+            let south = if y >= 1 { textures.heightmap[(x, y - 1)] } else { height };
+            let east = if x + 1 < textures.heightmap.width() { textures.heightmap[(x + 1, y)] } else { height };
+            let west = if x >= 1 { textures.heightmap[(x - 1, y)] } else { height };
 
-        *gx = (east - west) / 2.0;
-        *gy = (south - north) / 2.0;
+            textures.gradients_x[(x, y)] = (east - west) / 2.0;
+            textures.gradients_y[(x, y)] = (south - north) / 2.0;
+        }
     }
 }
 
-fn generate_shadows(
-    heights: &MountainTexture,
-    shadows: &mut MountainTexture,
-    shadow_slope: f32,
+pub fn generate_shadows(
+    textures: &mut MountainTextures,
+    shadow_settings: &MountainShadowSettings,
 ) {
-    for y in 0..heights.height() {
-        shadows[(0, y)] = heights[(0, y)] - shadow_slope;
-    }
+    let (width, height) = (textures.heightmap.width(), textures.heightmap.height());
+    let step_dir = shadow_settings.sun_direction.normalize();
 
-    for x in 1..heights.width() {
-        for y in 0..heights.height() {
-            let left_height = heights[(x - 1, y)];
-            let left_shadow = shadows[(x - 1, y)];
-            shadows[(x, y)] = left_height.max(left_shadow) - shadow_slope;
+    for x in 0..width {
+        for y in 0..height {
+            let mut res = 0f32;
+            let mut pos = Vec3::new(x as f32 / width as f32, textures.heightmap[(x, y)], y as f32 / height as f32);
+            let mut n = 0;
+
+            for _ in 0..128 {
+                n += 1;
+
+                if pos.x >= 1.0 || pos.x < 0.0 || pos.z >= 1.0 || pos.z < 0.0 {
+                    break;
+                }
+
+                let env = textures.heightmap[((pos.x * width as f32).floor() as usize, (pos.z * height as f32).floor() as usize)];
+                if env > pos.y {
+                    res = 1.0;
+                    break;
+                }
+
+                if pos.y > 1.0 {
+                    break;
+                }
+
+                pos += step_dir * ((pos.y - env) * 0.05).max(0.01);
+            }
+
+            if n == 128 {
+                res = 1.0;
+            }
+
+            textures.shadowmap[(x, y)] = res.clamp(0.0, 1.0);
         }
     }
 }

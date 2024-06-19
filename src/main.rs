@@ -3,11 +3,12 @@
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+use bevy_inspector_egui::quick::{AssetInspectorPlugin, ResourceInspectorPlugin};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use heights::{generate_maps, GenerationStrategy};
+use heights::{generate_maps, generate_shadows, GenerationStrategy};
 use material::{MountainMaterial, MountainMaterialPlugin, UpdateMountainMaterial};
-use settings::MountainShadowSlope;
+use settings::MountainShadowSettings;
+use textures::MountainTextures;
 
 mod material;
 mod textures;
@@ -21,11 +22,15 @@ fn main() {
         .add_plugins(MountainMaterialPlugin)
 
         .init_resource::<GenerationStrategy>()
-        .init_resource::<MountainShadowSlope>()
+        .init_resource::<MountainShadowSettings>()
         .register_type::<GenerationStrategy>()
-        .register_type::<MountainShadowSlope>()
+        .register_type::<MountainShadowSettings>()
+
+        .insert_resource(MountainTextures::new(1024, 1024))
 
         .add_plugins(ResourceInspectorPlugin::<GenerationStrategy>::default())
+        .add_plugins(AssetInspectorPlugin::<MountainMaterial>::default())
+        .add_plugins(ResourceInspectorPlugin::<MountainShadowSettings>::default())
 
         .add_systems(Startup, (setup, generate_maps))
         .add_systems(Update, regenerate_on_enter)
@@ -74,26 +79,38 @@ fn setup(
 }
 
 fn regenerate_on_enter(
-    commands: Commands,
-    images: ResMut<Assets<Image>>,
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
     strategy: Res<GenerationStrategy>,
-    update_material_evw: EventWriter<UpdateMountainMaterial>,
-    shadow_slope: Res<MountainShadowSlope>,
+    mut update_material_evw: EventWriter<UpdateMountainMaterial>,
+    shadow_settings: Res<MountainShadowSettings>,
     keys: Res<ButtonInput<KeyCode>>,
+    mut textures: ResMut<MountainTextures>,
 ) {
+    if keys.just_pressed(KeyCode::KeyS) {
+        generate_shadows(
+            textures.as_mut(),
+            shadow_settings.as_ref(),
+        );
+
+        commands.insert_resource(textures.as_raw(images.as_mut()));
+        update_material_evw.send(UpdateMountainMaterial);
+    }
+
     if keys.just_pressed(KeyCode::Enter) {
         generate_maps(
             commands,
             images,
             strategy,
             update_material_evw,
-            shadow_slope,
+            shadow_settings,
+            textures,
         );
     }
 }
 
 
-const PLANE_LENGTH: f32 = 200.0;
+const PLANE_LENGTH: f32 = 256.0;
 const PLANE_RES: usize = 4;
 
 fn create_mountain_plane() -> Mesh {
@@ -102,8 +119,6 @@ fn create_mountain_plane() -> Mesh {
 
     let mut positions = vec![];
     let mut uvs = vec![];
-    let mut tangents = vec![];
-    let tangent = Vec4::new(1.0, 0.0, 0.0, -1.0);
 
     for x in 0..=side_vert_count {
         for z in 0..=side_vert_count {
@@ -113,7 +128,6 @@ fn create_mountain_plane() -> Mesh {
                 (z as f32 / side_vert_count as f32 * PLANE_LENGTH) - half_length,
             ));
             uvs.push(Vec2::new(x as f32 / side_vert_count as f32, z as f32 / side_vert_count as f32));
-            tangents.push(tangent);
         }
     }
 
@@ -137,8 +151,5 @@ fn create_mountain_plane() -> Mesh {
     mesh.insert_indices(Indices::U32(indices));
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents);
-    mesh.duplicate_vertices();
-    mesh.compute_flat_normals();
     mesh
 }
