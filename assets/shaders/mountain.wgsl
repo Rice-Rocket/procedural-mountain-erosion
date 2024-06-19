@@ -64,5 +64,15 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
-    return vec4(1.0, 1.0, 1.0, 1.0);
+    let sample = textureSample(map, map_sampler, uv);
+    let terrain_height = sample.x;
+    let shadow_height = sample.y;
+
+    var col = vec3(1.0);
+
+    col = mix(col, vec3(0.0), f32(shadow_height > terrain_height) * (shadow_height - terrain_height) * 0.1);
+    // col = mix(col, vec3(1.0, 0.0, 0.0), f32(shadow_height > terrain_height));
+    // col = vec3(terrain_height - shadow_height);
+
+    return vec4(col, 1.0);
 }

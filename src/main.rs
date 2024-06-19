@@ -4,18 +4,21 @@ use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use material::{MountainMaterial, MountainMaterialPlugin, UpdateMountainMaterial};
-use textures::{MountainTexture, MountainTextures};
+use heights::{generate_maps, GenerationStrategy};
+use material::{MountainMaterial, MountainMaterialPlugin};
 
 mod material;
 mod textures;
+mod heights;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(MountainMaterialPlugin)
+        .init_resource::<GenerationStrategy>()
         .add_systems(Startup, setup)
+        .add_systems(Startup, generate_maps)
         .run();
 }
 
@@ -23,8 +26,6 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<MountainMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    images: ResMut<Assets<Image>>,
-    mut update_mountain_evw: EventWriter<UpdateMountainMaterial>,
 ) {
     commands.spawn((
         Camera3dBundle {
@@ -60,13 +61,6 @@ fn setup(
         transform: Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, 0.0, -0.1, 0.0)),
         ..default()
     });
-
-    commands.insert_resource(MountainTextures {
-        heightmap: MountainTexture::new(256, 256),
-        shadowmap: MountainTexture::new(256, 256),
-    }.into_raw(images));
-
-    update_mountain_evw.send(UpdateMountainMaterial);
 }
 
 

@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use std::{ops::{Index, IndexMut}, slice::{Iter, IterMut}, vec::IntoIter};
 
 use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages}}};
 
@@ -79,6 +79,46 @@ impl MountainTexture {
             width,
         }
     }
+
+    #[inline]
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    #[inline]
+    pub fn height(&self) -> u32 {
+        self.map.len() as u32 / self.width
+    }
+
+    #[inline]
+    pub fn pixels(&self) -> Pixels {
+        Pixels { iter: self.map.iter() }
+    }
+
+    #[inline]
+    pub fn pixels_mut(&mut self) -> PixelsMut {
+        PixelsMut { iter: self.map.iter_mut() }
+    }
+
+    #[inline]
+    pub fn into_pixels(self) -> IntoPixels {
+        IntoPixels { iter: self.map.into_iter() }
+    }
+
+    #[inline]
+    pub fn enumerate_pixels(&self) -> EnumeratePixels {
+        EnumeratePixels { size: self.map.len(), width: self.width as usize, index: 0, iter: self.map.iter() }
+    }
+
+    #[inline]
+    pub fn enumerate_pixels_mut(&mut self) -> EnumeratePixelsMut {
+        EnumeratePixelsMut { size: self.map.len(), width: self.width as usize, index: 0, iter: self.map.iter_mut() }
+    }
+
+    #[inline]
+    pub fn into_enumerate_pixels(self) -> IntoEnumeratePixels {
+        IntoEnumeratePixels { size: self.map.len(), width: self.width as usize, index: 0, iter: self.map.into_iter() }
+    }
 }
 
 impl Index<(usize, usize)> for MountainTexture {
@@ -120,5 +160,102 @@ impl From<MountainTexture> for Image {
         im.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING;
 
         im
+    }
+}
+
+pub struct Pixels<'a> {
+    iter: Iter<'a, f32>,
+}
+
+impl<'a> Iterator for Pixels<'a> {
+    type Item = &'a f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+pub struct PixelsMut<'a> {
+    iter: IterMut<'a, f32>,
+}
+
+impl<'a> Iterator for PixelsMut<'a> {
+    type Item = &'a mut f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+pub struct IntoPixels {
+    iter: IntoIter<f32>,
+}
+
+impl Iterator for IntoPixels {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+
+pub struct EnumeratePixels<'a> {
+    size: usize,
+    width: usize,
+    index: usize,
+    iter: Iter<'a, f32>,
+}
+
+impl<'a> Iterator for EnumeratePixels<'a> {
+    type Item = (usize, usize, &'a f32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.size {
+            return None;
+        }
+        self.index += 1;
+
+        Some(((self.index - 1) % self.width, (self.index - 1) / self.width, self.iter.next()?))
+    }
+}
+
+pub struct EnumeratePixelsMut<'a> {
+    size: usize,
+    width: usize,
+    index: usize,
+    iter: IterMut<'a, f32>,
+}
+
+impl<'a> Iterator for EnumeratePixelsMut<'a> {
+    type Item = (usize, usize, &'a mut f32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.size {
+            return None;
+        }
+        self.index += 1;
+
+        Some(((self.index - 1) % self.width, (self.index - 1) / self.width, self.iter.next()?))
+    }
+}
+
+pub struct IntoEnumeratePixels {
+    size: usize,
+    width: usize,
+    index: usize,
+    iter: IntoIter<f32>,
+}
+
+impl Iterator for IntoEnumeratePixels {
+    type Item = (usize, usize, f32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.size {
+            return None;
+        }
+        self.index += 1;
+
+        Some(((self.index - 1) % self.width, (self.index - 1) / self.width, self.iter.next()?))
     }
 }
