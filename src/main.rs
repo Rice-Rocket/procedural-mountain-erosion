@@ -1,5 +1,3 @@
-#![feature(const_type_id)]
-
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
@@ -26,7 +24,7 @@ fn main() {
         .register_type::<GenerationStrategy>()
         .register_type::<MountainShadowSettings>()
 
-        .insert_resource(MountainTextures::new(1024, 1024))
+        .insert_resource(MountainTextures::new(2048, 2048))
 
         .add_plugins(ResourceInspectorPlugin::<GenerationStrategy>::default())
         .add_plugins(AssetInspectorPlugin::<MountainMaterial>::default())
@@ -97,7 +95,7 @@ fn regenerate_on_enter(
         update_material_evw.send(UpdateMountainMaterial);
     }
 
-    if keys.just_pressed(KeyCode::Enter) {
+    if keys.just_pressed(KeyCode::KeyR) {
         generate_maps(
             commands,
             images,
@@ -111,7 +109,7 @@ fn regenerate_on_enter(
 
 
 const PLANE_LENGTH: f32 = 256.0;
-const PLANE_RES: usize = 4;
+const PLANE_RES: usize = 8;
 
 fn create_mountain_plane() -> Mesh {
     let half_length = PLANE_LENGTH * 0.5;

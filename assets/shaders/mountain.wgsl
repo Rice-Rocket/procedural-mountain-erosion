@@ -16,10 +16,20 @@ var<uniform> settings: MountainRenderSettings;
 var map: texture_2d<f32>;
 @group(2) @binding(2)
 var map_sampler: sampler;
+@group(2) @binding(3)
+var<storage, read> colors: array<ColorEntry>;
+
+struct ColorEntry {
+    color: vec3<f32>,
+    elevation: f32,
+    _padding: vec3<f32>,
+    steepness: f32,
+}
 
 struct MountainRenderSettings {
     sun_direction: vec3<f32>,
     terrain_height: f32,
+    blend_sharpness: f32,
 }
 
 
@@ -56,6 +66,35 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     return out;
 }
 
+fn hash(p: vec2<f32>) -> f32 {
+    var q = vec2<u32>(p);
+    q *= vec2(1597334677u, 3812015801u);
+    var n = q.x ^ q.y;
+    n = n * (n ^ (n >> 15));
+    return f32(n) * (1.0 / f32(0xffffffffu));
+}
+
+fn terrain_color(h: f32, normal: vec3<f32>) -> vec3<f32> {
+    let steepness = 1.0 - dot(normal, vec3(0.0, 1.0, 0.0));
+    let pos = vec2(h, steepness);
+    var col = vec3(0.0);
+    var amount = 0.0;
+
+    for (var i = 0u; i < 7; i++) {
+        let entry = colors[i];
+        let position = vec2(entry.elevation, entry.steepness);
+        let dist = distance(pos, position);
+        let weight = 1.0 / pow(dist, settings.blend_sharpness);
+
+        col += weight * entry.color;
+        amount += weight;
+    }
+
+    col /= amount;
+
+    return col;
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
@@ -70,8 +109,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     shadow = max(shadow, max(dot(normal, settings.sun_direction), 0.0));
     shadow = min(shadow, 0.9);
 
-    var col = vec3(1.0);
-
+    var col = terrain_color(terrain_height, normal);
     col = mix(col, vec3(0.0), shadow);
 
     return vec4(col, 1.0);

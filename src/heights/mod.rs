@@ -39,6 +39,9 @@ pub fn generate_maps(
 fn generate_gradients(
     textures: &mut MountainTextures,
 ) {
+    let dx = 2.0 / textures.heightmap.width() as f32;
+    let dy = 2.0 / textures.heightmap.height() as f32;
+
     for x in 0..textures.heightmap.width() {
         for y in 0..textures.heightmap.height() {
             let height = textures.heightmap[(x, y)];
@@ -47,8 +50,8 @@ fn generate_gradients(
             let east = if x + 1 < textures.heightmap.width() { textures.heightmap[(x + 1, y)] } else { height };
             let west = if x >= 1 { textures.heightmap[(x - 1, y)] } else { height };
 
-            textures.gradients_x[(x, y)] = (east - west) / 2.0;
-            textures.gradients_y[(x, y)] = (south - north) / 2.0;
+            textures.gradients_x[(x, y)] = (east - west) / dx;
+            textures.gradients_y[(x, y)] = (south - north) / dy;
         }
     }
 }
@@ -83,7 +86,7 @@ pub fn generate_shadows(
                     break;
                 }
 
-                pos += step_dir * ((pos.y - env) * 0.05).max(0.01);
+                pos += step_dir * ((pos.y - env) * 0.05).max(1.0 / width as f32);
             }
 
             if n == 128 {

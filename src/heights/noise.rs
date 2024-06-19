@@ -36,6 +36,8 @@ pub fn generate_heights(
     let noise = NoiseSimplex2d::new(0);
     let width = map.width();
     let height = map.height();
+    let mut min = f32::MAX;
+    let mut max = f32::MIN;
 
     for (x, y, px) in map.enumerate_pixels_mut() {
         let uv = Vec2::new(x as f32 / width as f32, y as f32 / height as f32);
@@ -50,7 +52,13 @@ pub fn generate_heights(
             amp *= settings.persistence;
         }
 
-        *px = (noise_val - settings.offset).clamp(0.0, 1.0);
+        *px = noise_val - settings.offset;
+        min = min.min(*px);
+        max = max.max(*px);
+    }
+
+    for px in map.pixels_mut() {
+        *px = (*px - min) / (max - min);
     }
 }
 

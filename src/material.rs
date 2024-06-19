@@ -1,12 +1,12 @@
 use bevy::{asset::load_internal_asset, prelude::*, render::render_resource::AsBindGroup};
 
-use crate::{settings::{MountainRenderSettings, MountainShadowSettings}, textures::MountainTexturesRaw};
+use crate::{settings::{ColorEntry, MountainRenderSettings, MountainShadowSettings}, textures::MountainTexturesRaw};
 
 pub const MOUNTAIN_MATERIAL_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x243e54999439800056177abc27c63000);
 
 
-#[derive(AsBindGroup, Debug, Reflect, Clone, Asset, Default)]
+#[derive(AsBindGroup, Debug, Reflect, Clone, Asset)]
 #[reflect(Debug, Default)]
 pub struct MountainMaterial {
     #[uniform(0, visibility(vertex, fragment))]
@@ -15,6 +15,9 @@ pub struct MountainMaterial {
     #[texture(1, visibility(vertex, fragment), dimension = "2d")]
     #[sampler(2)]
     pub map: Option<Handle<Image>>,
+
+    #[storage(3, visibility(fragment), read_only)]
+    pub colors: [ColorEntry; 7],
 }
 
 impl Material for MountainMaterial {

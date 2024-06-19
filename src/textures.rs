@@ -1,6 +1,6 @@
 use std::{ops::{Index, IndexMut}, slice::{Iter, IterMut}, vec::IntoIter};
 
-use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_asset::RenderAssetUsages, render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages}}};
+use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_asset::RenderAssetUsages, render_resource::{Extent3d, FilterMode, SamplerDescriptor, TextureDimension, TextureFormat, TextureUsages}, texture::ImageSampler}};
 
 
 #[derive(Resource, ExtractResource, Clone)]
@@ -70,6 +70,11 @@ impl MountainTextures {
         );
 
         im.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING;
+        im.sampler = ImageSampler::Descriptor(SamplerDescriptor {
+            mag_filter: FilterMode::Linear,
+            min_filter: FilterMode::Linear,
+            ..default()
+        }.into());
 
         MountainTexturesRaw { map: images.add(im) }
     }
