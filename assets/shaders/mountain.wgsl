@@ -11,9 +11,15 @@
 #endif
 
 @group(2) @binding(0)
-var map: texture_2d<f32>;
+var<uniform> settings: MountainRenderSettings;
 @group(2) @binding(1)
+var map: texture_2d<f32>;
+@group(2) @binding(2)
 var map_sampler: sampler;
+
+struct MountainRenderSettings {
+    shadow_attenuation: f32,
+}
 
 
 @vertex
@@ -68,11 +74,14 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let terrain_height = sample.x;
     let shadow_height = sample.y;
 
+    let gradient = sample.zw;
+    let steepness = length(gradient);
+    let normal = vec3(gradient.x, -1.0, gradient.y) / steepness;
+
     var col = vec3(1.0);
 
-    col = mix(col, vec3(0.0), f32(shadow_height > terrain_height) * (shadow_height - terrain_height) * 0.1);
-    // col = mix(col, vec3(1.0, 0.0, 0.0), f32(shadow_height > terrain_height));
-    // col = vec3(terrain_height - shadow_height);
+    let directional_shadow = f32(shadow_height > terrain_height) * (shadow_height - terrain_height) * settings.shadow_attenuation;
+    col = mix(col, vec3(0.0), directional_shadow);
 
     return vec4(col, 1.0);
 }

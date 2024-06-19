@@ -6,10 +6,12 @@ use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use heights::{generate_maps, GenerationStrategy};
 use material::{MountainMaterial, MountainMaterialPlugin};
+use settings::MountainShadowSlope;
 
 mod material;
 mod textures;
 mod heights;
+mod settings;
 
 fn main() {
     App::new()
@@ -17,6 +19,7 @@ fn main() {
         .add_plugins(PanOrbitCameraPlugin)
         .add_plugins(MountainMaterialPlugin)
         .init_resource::<GenerationStrategy>()
+        .init_resource::<MountainShadowSlope>()
         .add_systems(Startup, setup)
         .add_systems(Startup, generate_maps)
         .run();

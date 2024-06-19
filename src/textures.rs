@@ -12,6 +12,8 @@ pub struct MountainTexturesRaw {
 pub struct MountainTextures {
     pub heightmap: MountainTexture,
     pub shadowmap: MountainTexture,
+    pub gradients_x: MountainTexture,
+    pub gradients_y: MountainTexture,
 }
 
 impl MountainTextures {
@@ -19,6 +21,8 @@ impl MountainTextures {
         Self {
             heightmap: MountainTexture::new(width, height),
             shadowmap: MountainTexture::new(width, height),
+            gradients_x: MountainTexture::new(width, height),
+            gradients_y: MountainTexture::new(width, height),
         }
     }
 
@@ -33,28 +37,34 @@ impl MountainTextures {
                 depth_or_array_layers: 1,
             },
             TextureDimension::D2,
-            self.heightmap.map.iter().zip(self.shadowmap.map.iter()).flat_map(|(height, shadow)| {
-                let height_bits = height.to_bits();
-                let shadow_bits = shadow.to_bits();
-                [
-                    (height_bits & 0x000000FF) as u8,
-                    ((height_bits & 0x0000FF00) >> 8) as u8,
-                    ((height_bits & 0x00FF0000) >> 16) as u8,
-                    ((height_bits & 0xFF000000) >> 24) as u8,
-                    (shadow_bits & 0x000000FF) as u8,
-                    ((shadow_bits & 0x0000FF00) >> 8) as u8,
-                    ((shadow_bits & 0x00FF0000) >> 16) as u8,
-                    ((shadow_bits & 0xFF000000) >> 24) as u8,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                ].into_iter()
-            }).collect(),
+            self.heightmap.map.iter()
+                .zip(self.shadowmap.map.iter())
+                .zip(self.gradients_x.map.iter())
+                .zip(self.gradients_y.map.iter())
+                .flat_map(|(((height, shadow), gx), gy)| {
+                    let height_bits = height.to_bits();
+                    let shadow_bits = shadow.to_bits();
+                    let gx_bits = gx.to_bits();
+                    let gy_bits = gy.to_bits();
+                    [
+                        (height_bits & 0x000000FF) as u8,
+                        ((height_bits & 0x0000FF00) >> 8) as u8,
+                        ((height_bits & 0x00FF0000) >> 16) as u8,
+                        ((height_bits & 0xFF000000) >> 24) as u8,
+                        (shadow_bits & 0x000000FF) as u8,
+                        ((shadow_bits & 0x0000FF00) >> 8) as u8,
+                        ((shadow_bits & 0x00FF0000) >> 16) as u8,
+                        ((shadow_bits & 0xFF000000) >> 24) as u8,
+                        (gx_bits & 0x000000FF) as u8,
+                        ((gx_bits & 0x0000FF00) >> 8) as u8,
+                        ((gx_bits & 0x00FF0000) >> 16) as u8,
+                        ((gx_bits & 0xFF000000) >> 24) as u8,
+                        (gy_bits & 0x000000FF) as u8,
+                        ((gy_bits & 0x0000FF00) >> 8) as u8,
+                        ((gy_bits & 0x00FF0000) >> 16) as u8,
+                        ((gy_bits & 0xFF000000) >> 24) as u8,
+                    ].into_iter()
+                }).collect(),
             TextureFormat::Rgba32Float,
             RenderAssetUsages::RENDER_WORLD,
         );
@@ -73,6 +83,7 @@ pub struct MountainTexture{
 }
 
 impl MountainTexture {
+    #[inline]
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             map: vec![0.0; (width * height) as usize],
@@ -81,13 +92,13 @@ impl MountainTexture {
     }
 
     #[inline]
-    pub fn width(&self) -> u32 {
-        self.width
+    pub fn width(&self) -> usize {
+        self.width as usize
     }
 
     #[inline]
-    pub fn height(&self) -> u32 {
-        self.map.len() as u32 / self.width
+    pub fn height(&self) -> usize {
+        self.map.len() / self.width as usize
     }
 
     #[inline]
