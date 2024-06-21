@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use noise::NoiseGeneratorSettings;
 
-use crate::{material::UpdateMountainMaterial, settings::MountainShadowSettings, textures::MountainTextures};
+use crate::{material::UpdateMountainMaterial, settings::MountainShadowSettings, textures::{MountainTextures, MountainTexturesRaw}};
 
+pub mod erode;
 pub mod noise;
 
 #[derive(Reflect, Resource, Clone)]
@@ -32,11 +33,11 @@ pub fn generate_maps(
     generate_gradients(textures.as_mut());
     generate_shadows(textures.as_mut(), shadow_settings.as_ref());
 
-    commands.insert_resource(textures.as_raw(images.as_mut()));
+    commands.insert_resource(MountainTexturesRaw { map: images.add(textures.as_raw()) });
     update_material_evw.send(UpdateMountainMaterial);
 }
 
-fn generate_gradients(
+pub fn generate_gradients(
     textures: &mut MountainTextures,
 ) {
     let dx = 2.0 / textures.heightmap.width() as f32;

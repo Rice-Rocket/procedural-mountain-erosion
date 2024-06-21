@@ -3,7 +3,7 @@ use std::{ops::{Index, IndexMut}, slice::{Iter, IterMut}, vec::IntoIter};
 use bevy::{prelude::*, render::{extract_resource::ExtractResource, render_asset::RenderAssetUsages, render_resource::{Extent3d, FilterMode, SamplerDescriptor, TextureDimension, TextureFormat, TextureUsages}, texture::ImageSampler}};
 
 
-#[derive(Resource, ExtractResource, Clone)]
+#[derive(Reflect, Resource, ExtractResource, Clone)]
 pub struct MountainTexturesRaw {
     pub map: Handle<Image>,
 }
@@ -26,10 +26,7 @@ impl MountainTextures {
         }
     }
 
-    pub fn as_raw(
-        &self,
-        images: &mut Assets<Image>,
-    ) -> MountainTexturesRaw {
+    pub fn as_raw(&self) -> Image {
         let mut im = Image::new(
             Extent3d {
                 width: self.heightmap.width,
@@ -66,7 +63,7 @@ impl MountainTextures {
                     ].into_iter()
                 }).collect(),
             TextureFormat::Rgba32Float,
-            RenderAssetUsages::RENDER_WORLD,
+            RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
         );
 
         im.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING;
@@ -76,7 +73,7 @@ impl MountainTextures {
             ..default()
         }.into());
 
-        MountainTexturesRaw { map: images.add(im) }
+        im
     }
 }
 
@@ -104,6 +101,16 @@ impl MountainTexture {
     #[inline]
     pub fn height(&self) -> usize {
         self.map.len() / self.width as usize
+    }
+
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.map.len()
+    }
+
+    #[inline]
+    pub fn get(&self, i: usize) -> Option<f32> {
+        self.map.get(i).map(|x| *x)
     }
 
     #[inline]
@@ -148,6 +155,20 @@ impl Index<(usize, usize)> for MountainTexture {
 impl IndexMut<(usize, usize)> for MountainTexture {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         &mut self.map[index.1 * self.width as usize + index.0]
+    }
+}
+
+impl Index<usize> for MountainTexture {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.map[index]
+    }
+}
+
+impl IndexMut<usize> for MountainTexture {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.map[index]
     }
 }
 

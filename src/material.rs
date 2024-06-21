@@ -1,6 +1,6 @@
 use bevy::{asset::load_internal_asset, prelude::*, render::render_resource::AsBindGroup};
 
-use crate::{settings::{ColorEntry, MountainRenderSettings, MountainShadowSettings}, textures::MountainTexturesRaw};
+use crate::{compute::uniforms::MountainComputeTextures, settings::{ColorEntry, MountainRenderSettings, MountainShadowSettings}};
 
 pub const MOUNTAIN_MATERIAL_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x243e54999439800056177abc27c63000);
@@ -36,15 +36,19 @@ pub struct UpdateMountainMaterial;
 pub fn prepare_mountain_material(
     handles: Query<&Handle<MountainMaterial>>,
     mut materials: ResMut<Assets<MountainMaterial>>,
-    mountain_textures: Res<MountainTexturesRaw>,
+    mountain_textures: Res<MountainComputeTextures>,
     mut updates_evr: EventReader<UpdateMountainMaterial>,
     shadow_settings: Res<MountainShadowSettings>,
 ) {
-    for _ev in updates_evr.read() {
-        for handle in handles.iter() {
-            let mat = materials.get_mut(handle).unwrap();
-            mat.map = Some(mountain_textures.map.clone());
+    for handle in handles.iter() {
+        let mat = materials.get_mut(handle).unwrap();
+
+        if updates_evr.read().next().is_some() {
             mat.settings.sun_direction = shadow_settings.sun_direction.normalize();
+        }
+
+        if mat.map.is_none() {
+            mat.map = Some(mountain_textures.map.clone())
         }
     }
 }
