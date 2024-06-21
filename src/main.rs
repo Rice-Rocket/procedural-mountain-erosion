@@ -2,9 +2,8 @@ use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use compute::{uniforms::{MountainErosionTrigger, RegenerateMountain}, MountainComputePlugin};
+use compute::{uniforms::{MountainErosionTrigger, RegenerateMountain, RegenerateShadows}, MountainComputePlugin};
 use material::{MountainMaterial, MountainMaterialPlugin};
-use settings::MountainShadowSettings;
 
 mod material;
 mod compute;
@@ -20,9 +19,6 @@ fn main() {
             MountainMaterialPlugin,
             MountainComputePlugin,
         ))
-
-        .init_resource::<MountainShadowSettings>()
-        // .register_type::<MountainShadowSettings>()
 
         // .init_resource::<Rng>()
         // .insert_resource(MountainTextures::new(2048, 2048))
@@ -80,10 +76,15 @@ fn setup(
 fn keybinds(
     keys: Res<ButtonInput<KeyCode>>,
     mut gen_fbm_evw: EventWriter<RegenerateMountain>,
+    mut gen_shadow_evw: EventWriter<RegenerateShadows>,
     mut erosion_evw: EventWriter<MountainErosionTrigger>,
 ) {
     if keys.just_pressed(KeyCode::KeyR) {
         gen_fbm_evw.send(RegenerateMountain);
+    }
+
+    if keys.just_pressed(KeyCode::KeyS) {
+        gen_shadow_evw.send(RegenerateShadows);
     }
 
     if keys.just_pressed(KeyCode::KeyE) {

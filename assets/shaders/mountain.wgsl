@@ -30,6 +30,7 @@ struct MountainRenderSettings {
     sun_direction: vec3<f32>,
     terrain_height: f32,
     blend_sharpness: f32,
+    pixel_size: f32,
 }
 
 
@@ -95,6 +96,15 @@ fn terrain_color(h: f32, normal: vec3<f32>) -> vec3<f32> {
     return col;
 }
 
+fn gradient(uv: vec2<f32>) -> vec2<f32> {
+    let north = textureSample(map, map_sampler, uv + vec2(0.0, settings.pixel_size)).x;
+    let south = textureSample(map, map_sampler, uv + vec2(0.0, -settings.pixel_size)).x;
+    let east = textureSample(map, map_sampler, uv + vec2(settings.pixel_size, 0.0)).x;
+    let west = textureSample(map, map_sampler, uv + vec2(-settings.pixel_size, 0.0)).x;
+
+    return vec2((east - west) / (2.0 * settings.pixel_size), (south - north) / (2.0 * settings.pixel_size));
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
@@ -102,9 +112,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let terrain_height = sample.x;
     var shadow = sample.y;
 
-    let gradient = sample.zw;
-    let steepness = length(gradient);
-    let normal = normalize(vec3(gradient.x, 1.0, gradient.y));
+    let grad = gradient(uv);
+    let normal = normalize(vec3(grad.x, 1.0, grad.y));
 
     shadow = max(shadow, max(dot(normal, settings.sun_direction), 0.0));
     shadow = min(shadow, 0.9);

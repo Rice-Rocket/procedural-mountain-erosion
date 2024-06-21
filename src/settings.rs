@@ -7,6 +7,7 @@ pub struct MountainRenderSettings {
     pub sun_direction: Vec3,
     pub terrain_height: f32,
     pub blend_sharpness: f32,
+    pub pixel_size: f32,
 }
 
 impl Default for MountainRenderSettings {
@@ -15,20 +16,7 @@ impl Default for MountainRenderSettings {
             sun_direction: Vec3::ZERO,
             terrain_height: 60.0,
             blend_sharpness: 10.0,
-        }
-    }
-}
-
-#[derive(Reflect, Resource, Clone)]
-#[reflect(Resource)]
-pub struct MountainShadowSettings{
-    pub sun_direction: Vec3,
-}
-
-impl Default for MountainShadowSettings {
-    fn default() -> Self {
-        Self {
-            sun_direction: Vec3::new(1.0, 4.0, 0.5).normalize(),
+            pixel_size: 0.0,
         }
     }
 }

@@ -1,7 +1,7 @@
 @group(0) @binding(0)
 var<uniform> settings: MountainSettings;
 @group(0) @binding(1)
-var map: texture_storage_2d_array<rgba32float, read_write>;
+var map: texture_storage_2d<rgba32float, read_write>;
 @group(0) @binding(2)
 var<storage, read> brush_indices: array<i32, 64>;
 @group(0) @binding(3)
@@ -33,5 +33,10 @@ struct MountainSettings {
 
 @compute @workgroup_size(1, 1024, 1)
 fn erode(@builtin(global_invocation_id) id: vec3<u32>) {
+    let original = textureLoad(map, id.xy);
+    var height = original.x;
 
+    height = clamp(height - 0.001, 0.0, 1.0);
+
+    textureStore(map, id.xy, vec4(height, original.yzw));
 }

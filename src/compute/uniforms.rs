@@ -12,7 +12,7 @@ use bevy::{
     },
 };
 
-use super::{node::{MountainErosionStatus, MountainGenerateFBMStatus}, TEXTURE_SIZE};
+use super::{node::{MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus}, TEXTURE_SIZE};
 
 pub const EROSION_RADIUS: i32 = 3;
 // NOTE: Make sure to change value in shader if this is changed.
@@ -29,7 +29,11 @@ pub struct MountainComputeSettings {
     pub persistence: f32,
     pub sharpness: f32,
     pub offset: f32,
+    pub strength: f32,
     pub center: Vec2,
+
+    pub sun_direction: Vec3,
+    _padding: f32,
 
     pub max_lifetime: u32,
     pub inertia: f32,
@@ -41,8 +45,6 @@ pub struct MountainComputeSettings {
     pub gravity: f32,
     pub start_speed: f32,
     pub start_water: f32,
-
-    _padding: f32,
 }
 
 impl Default for  MountainComputeSettings {
@@ -56,7 +58,11 @@ impl Default for  MountainComputeSettings {
             persistence: 0.2,
             sharpness: 0.15,
             offset: 0.0,
+            strength: 1.0,
             center: Vec2::new(0.0, 0.0),
+
+            sun_direction: Vec3::new(1.0, 4.0, 0.5).normalize(),
+            _padding: 0.0,
 
             max_lifetime: 30,
             inertia: 0.3,
@@ -68,8 +74,6 @@ impl Default for  MountainComputeSettings {
             gravity: 4.0,
             start_speed: 1.0,
             start_water: 1.0,
-
-            _padding: 0.0,
         }
     }
 }
@@ -95,11 +99,23 @@ pub fn prepare_uniforms(
 pub struct RegenerateMountain;
 
 pub fn update_generate_fbm_status(
-    mut regen_mountain_evr: EventReader<RegenerateMountain>,
-    mut gen_fbm_status: ResMut<MountainGenerateFBMStatus>,
+    mut evr: EventReader<RegenerateMountain>,
+    mut status: ResMut<MountainGenerateFBMStatus>,
 ) {
-    for _ev in regen_mountain_evr.read() {
-        *gen_fbm_status = MountainGenerateFBMStatus::Update;
+    for _ev in evr.read() {
+        *status = MountainGenerateFBMStatus::Update;
+    }
+}
+
+#[derive(Event)]
+pub struct RegenerateShadows;
+
+pub fn update_generate_shadow_status(
+    mut evr: EventReader<RegenerateShadows>,
+    mut status: ResMut<MountainGenerateShadowStatus>,
+) {
+    for _ev in evr.read() {
+        *status = MountainGenerateShadowStatus::Update;
     }
 }
 

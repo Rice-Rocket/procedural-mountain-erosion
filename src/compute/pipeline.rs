@@ -14,6 +14,7 @@ pub struct MountainComputePipeline {
     pub layout: BindGroupLayout,
 
     pub fbm_pipeline: CachedComputePipelineId,
+    pub shadow_pipeline: CachedComputePipelineId,
     pub erosion_pipeline: CachedComputePipelineId,
 }
 
@@ -82,6 +83,15 @@ impl FromWorld for MountainComputePipeline {
             entry_point: "height".into(),
         });
 
+        let shadow_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: None,
+            layout: vec![layout.clone()],
+            push_constant_ranges: Vec::new(),
+            shader: height_shader.clone(),
+            shader_defs: vec![],
+            entry_point: "shadow".into(),
+        });
+        
         let erosion_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: None,
             layout: vec![layout.clone()],
@@ -94,6 +104,7 @@ impl FromWorld for MountainComputePipeline {
         MountainComputePipeline {
             layout,
             fbm_pipeline,
+            shadow_pipeline,
             erosion_pipeline,
         }
     }

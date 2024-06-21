@@ -1,6 +1,6 @@
 use bevy::{asset::load_internal_asset, prelude::*, render::render_resource::AsBindGroup};
 
-use crate::{compute::uniforms::MountainComputeTextures, settings::{ColorEntry, MountainRenderSettings, MountainShadowSettings}};
+use crate::{compute::uniforms::{MountainComputeSettings, MountainComputeTextures}, settings::{ColorEntry, MountainRenderSettings}};
 
 pub const MOUNTAIN_MATERIAL_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x243e54999439800056177abc27c63000);
@@ -30,25 +30,19 @@ impl Material for MountainMaterial {
     }
 }
 
-#[derive(Event)]
-pub struct UpdateMountainMaterial;
-
 pub fn prepare_mountain_material(
     handles: Query<&Handle<MountainMaterial>>,
     mut materials: ResMut<Assets<MountainMaterial>>,
     mountain_textures: Res<MountainComputeTextures>,
-    mut updates_evr: EventReader<UpdateMountainMaterial>,
-    shadow_settings: Res<MountainShadowSettings>,
+    compute_settings: Res<MountainComputeSettings>,
 ) {
     for handle in handles.iter() {
         let mat = materials.get_mut(handle).unwrap();
 
-        if updates_evr.read().next().is_some() {
-            mat.settings.sun_direction = shadow_settings.sun_direction.normalize();
-        }
-
         if mat.map.is_none() {
-            mat.map = Some(mountain_textures.map.clone())
+            mat.map = Some(mountain_textures.map.clone());
+            mat.settings.pixel_size = 1.0 / compute_settings.map_size as f32;
+            mat.settings.sun_direction = compute_settings.sun_direction;
         }
     }
 }
@@ -68,7 +62,6 @@ impl Plugin for MountainMaterialPlugin {
         app
             .add_plugins(MaterialPlugin::<MountainMaterial>::default())
             .add_systems(Update, prepare_mountain_material)
-            .add_event::<UpdateMountainMaterial>()
             .register_type::<MountainMaterial>()
             .register_asset_reflect::<MountainMaterial>()
             .register_type::<Handle<MountainMaterial>>();

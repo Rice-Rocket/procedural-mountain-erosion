@@ -17,10 +17,17 @@ pub enum MountainGenerateFBMStatus {
     Wait
 }
 
-#[derive(Resource, ExtractResource, Default, Clone, Copy, PartialEq, Eq)]
-pub enum MountainErosionStatus {
+#[derive(Resource, ExtractResource, Default, Clone, Copy)]
+pub enum MountainGenerateShadowStatus {
     #[default]
     Update,
+    Wait,
+}
+
+#[derive(Resource, ExtractResource, Default, Clone, Copy, PartialEq, Eq)]
+pub enum MountainErosionStatus {
+    Update,
+    #[default]
     Wait
 }
 
@@ -29,6 +36,7 @@ pub struct MountainRenderLabel;
 
 #[derive(Default)]
 pub struct MountainComputeNode {
+    generate_shadow: bool,
     generate_fbm: bool,
     enable_erosion: bool,
 }
@@ -40,23 +48,29 @@ impl render_graph::Node for MountainComputeNode {
 
         let mut fbm_status = world.resource_mut::<MountainGenerateFBMStatus>();
 
-        let fbm_trigger = match *fbm_status {
-            MountainGenerateFBMStatus::Update => true,
-            MountainGenerateFBMStatus::Wait => false,
-        };
-
-        if fbm_trigger && self.generate_fbm {
-            *fbm_status = MountainGenerateFBMStatus::Wait;
+        if let MountainGenerateFBMStatus::Update = *fbm_status {
+            if self.generate_fbm {
+                *fbm_status = MountainGenerateFBMStatus::Wait;
+                self.generate_fbm = false;
+            } else {
+                self.generate_fbm = true;
+            }
+        } else {
             self.generate_fbm = false;
-            return;
         }
 
-        if fbm_trigger && !self.generate_fbm {
-            self.generate_fbm = true;
-            return;
-        }
+        let mut shadow_status = world.resource_mut::<MountainGenerateShadowStatus>();
 
-        self.generate_fbm = false;
+        if let MountainGenerateShadowStatus::Update = *shadow_status {
+            if self.generate_shadow {
+                *shadow_status = MountainGenerateShadowStatus::Wait;
+                self.generate_shadow = false;
+            } else {
+                self.generate_shadow = true
+            }
+        } else {
+            self.generate_shadow = false;
+        }
     }
 
     fn run<'w>(
@@ -109,6 +123,19 @@ impl render_graph::Node for MountainComputeNode {
             pass.set_bind_group(0, &bind_group, &[]);
 
             let Some(pipeline) = pipeline_cache.get_compute_pipeline(compute_pipelines.fbm_pipeline) else {
+                return Ok(());
+            };
+
+            pass.set_pipeline(pipeline);
+            pass.dispatch_workgroups(TEXTURE_SIZE / WORKGROUP_SIZE, TEXTURE_SIZE / WORKGROUP_SIZE, 1);
+        }
+        
+        if self.generate_fbm || self.generate_shadow {
+            let mut pass = encoder.begin_compute_pass(&ComputePassDescriptor::default());
+
+            pass.set_bind_group(0, &bind_group, &[]);
+
+            let Some(pipeline) = pipeline_cache.get_compute_pipeline(compute_pipelines.shadow_pipeline) else {
                 return Ok(());
             };
 
