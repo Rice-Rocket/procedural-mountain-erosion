@@ -135,6 +135,7 @@ pub fn update_generate_shadow_status(
     }
 }
 
+#[allow(dead_code)]
 #[derive(Event)]
 pub enum MountainErosionTrigger {
     Start,

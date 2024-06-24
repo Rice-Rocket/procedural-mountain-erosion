@@ -75,7 +75,7 @@ impl render_graph::Node for MountainComputeNode {
 
     fn run<'w>(
         &self,
-        graph: &mut render_graph::RenderGraphContext,
+        _graph: &mut render_graph::RenderGraphContext,
         render_context: &mut bevy::render::renderer::RenderContext<'w>,
         world: &'w World,
     ) -> Result<(), render_graph::NodeRunError> {

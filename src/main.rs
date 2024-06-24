@@ -6,12 +6,9 @@ use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
 use compute::{uniforms::{MountainComputeSettings, MountainErosionTrigger, RegenerateMountain, RegenerateShadows}, MountainComputePlugin};
 use material::{MountainMaterial, MountainMaterialPlugin};
-use settings::MountainRenderSettings;
 
 mod material;
 mod compute;
-// mod textures;
-// mod heights;
 mod settings;
 
 fn main() {
@@ -33,14 +30,8 @@ fn main() {
             AssetInspectorPlugin::<MountainMaterial>::default(),
         ))
 
-        // .init_resource::<Rng>()
-        // .insert_resource(MountainTextures::new(2048, 2048))
-
         .add_systems(Startup, setup)
         .add_systems(Update, keybinds)
-
-        // .add_systems(Update, erode_main.run_if(in_state(AppState::Eroding)))
-        // .add_systems(OnEnter(AppState::Eroding), erode_init)
 
         .run();
 }
@@ -101,55 +92,9 @@ fn keybinds(
     }
 
     if keys.just_pressed(KeyCode::KeyE) {
-        println!("toggled erosion");
         erosion_evw.send(MountainErosionTrigger::Toggle);
     }
 }
-
-// #[allow(clippy::too_many_arguments)]
-// fn regenerate_on_enter(
-//     mut commands: Commands,
-//     mut images: ResMut<Assets<Image>>,
-//     strategy: Res<GenerationStrategy>,
-//     mut update_material_evw: EventWriter<UpdateMountainMaterial>,
-//     shadow_settings: Res<MountainShadowSettings>,
-//     keys: Res<ButtonInput<KeyCode>>,
-//     mut textures: ResMut<MountainTextures>,
-//     state: Res<State<AppState>>,
-//     mut next_state: ResMut<NextState<AppState>>,
-//     time: Res<Time>,
-//     mut last_time: Local<Option<f32>>,
-// ) {
-//     if keys.just_pressed(KeyCode::KeyU) || (last_time.is_none() || time.elapsed_seconds() - last_time.unwrap() > 30.0) {
-//         generate_shadows(textures.as_mut(), shadow_settings.as_ref());
-//         generate_gradients(textures.as_mut());
-//
-//         commands.insert_resource(MountainTexturesRaw { map: images.add(textures.as_raw()) });
-//         update_material_evw.send(UpdateMountainMaterial);
-//         *last_time = Some(time.elapsed_seconds());
-//     }
-//
-//     if keys.just_pressed(KeyCode::KeyE) {
-//         match **state {
-//             AppState::Main => next_state.set(AppState::Eroding),
-//             AppState::Eroding => next_state.set(AppState::Main),
-//         }
-//     }
-//
-//     if keys.just_pressed(KeyCode::KeyR) {
-//         next_state.set(AppState::Main);
-//
-//         generate_maps(
-//             commands,
-//             images,
-//             strategy,
-//             update_material_evw,
-//             shadow_settings,
-//             textures,
-//         );
-//     }
-// }
-
 
 const PLANE_LENGTH: f32 = 256.0;
 const PLANE_RES: usize = 8;
