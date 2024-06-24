@@ -8,7 +8,7 @@ use uniforms::{
     prepare_storage, prepare_uniforms, setup_storage, setup_textures, update_erosion_status, update_generate_fbm_status, update_generate_shadow_status, MountainBrushIndices, MountainBrushStorage, MountainBrushWeights, MountainComputeSettings, MountainComputeTextures, MountainComputeUniforms, MountainErosionTrigger, RegenerateMountain, RegenerateShadows
 };
 
-pub const TEXTURE_SIZE: u32 = 4096;
+pub const TEXTURE_SIZE: u32 = 1024;
 pub const WORKGROUP_SIZE: u32 = 8;
 pub const NUM_EROSIONS: u32 = 64;
 

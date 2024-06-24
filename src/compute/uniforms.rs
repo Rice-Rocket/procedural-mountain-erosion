@@ -57,11 +57,11 @@ impl Default for  MountainComputeSettings {
         Self {
             map_size: TEXTURE_SIZE,
 
-            num_octaves: 8,
+            num_octaves: 4,
             roughness: 1.4,
             lacunarity: 5.0,
             persistence: 0.2,
-            sharpness: 0.15,
+            sharpness: 0.0,
             offset: 0.0,
             strength: 1.0,
             center: Vec2::new(0.0, 0.0),
