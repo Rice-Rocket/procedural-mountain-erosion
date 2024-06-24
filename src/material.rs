@@ -41,6 +41,7 @@ pub fn prepare_mountain_material(
 
         mat.settings.pixel_size = 1.0 / compute_settings.map_size as f32;
         mat.settings.sun_direction = compute_settings.sun_direction.normalize() * Vec3::new(1.0, -1.0, -1.0);
+        mat.settings.erosion_radius = compute_settings.erosion_radius;
 
         if mat.map.is_none() {
             mat.map = Some(mountain_textures.map.clone());

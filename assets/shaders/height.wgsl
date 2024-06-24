@@ -180,14 +180,15 @@ fn height(@builtin(global_invocation_id) id: vec3<u32>) {
 
     height = clamp(height * settings.strength + settings.offset, 0.0, 1.0);
 
-    textureStore(map, id.xy, vec4(height, 0.0, 0.0, 0.0));
+    textureStore(map, id.xy, vec4(height, 0.0, 0.0, 1.0));
 }
 
 @compute @workgroup_size(8, 8, 1)
 fn shadow(@builtin(global_invocation_id) id: vec3<u32>) {
     let uv = vec2<f32>(id.xy) / f32(settings.map_size);
 
-    let height = textureLoad(map, id.xy).x;
+    let original = textureLoad(map, id.xy);
+    let height = original.x;
     let pixel_size = 1.0 / f32(settings.map_size);
     var shadow = 0.0;
     var pos = vec3(uv.x, height, uv.y);
@@ -196,11 +197,15 @@ fn shadow(@builtin(global_invocation_id) id: vec3<u32>) {
     for (var i = 0u; i < 128u; i++) {
         n++;
 
-        if pos.x >= 1.0 || pos.x < 0.0 || pos.z >= 1.0 || pos.z < 0.0 {
+        let coord = pos.xz * f32(settings.map_size);
+
+        if coord.x >= f32(settings.map_size) - f32(settings.erosion_radius)
+        || coord.y >= f32(settings.map_size) - f32(settings.erosion_radius)
+        || coord.x < f32(settings.erosion_radius) || coord.y < f32(settings.erosion_radius) {
             break;
         }
 
-        let h = textureLoad(map, vec2<u32>(pos.xz * f32(settings.map_size))).x;
+        let h = textureLoad(map, vec2<u32>(coord)).x;
         if h > pos.y {
             shadow = 1.0;
             break;
@@ -217,5 +222,5 @@ fn shadow(@builtin(global_invocation_id) id: vec3<u32>) {
         shadow = 1.0;
     }
 
-    textureStore(map, id.xy, vec4(height, clamp(shadow, 0.0, 1.0), 0.0, 0.0));
+    textureStore(map, id.xy, vec4(height, clamp(shadow, 0.0, 1.0), original.zw));
 }

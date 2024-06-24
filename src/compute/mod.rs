@@ -2,13 +2,13 @@ use bevy::{prelude::*, render::{
     extract_resource::ExtractResourcePlugin, render_graph::RenderGraph,
     Render, RenderApp, RenderSet,
 }};
-use node::{MountainComputeNode, MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus, MountainRenderLabel};
+use node::{MountainComputeNode, MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus, MountainPrepareWriteStatus, MountainRenderLabel};
 use pipeline::MountainComputePipeline;
 use uniforms::{
-    prepare_storage, prepare_uniforms, setup_storage, setup_textures, update_erosion_status, update_generate_fbm_status, update_generate_shadow_status, MountainBrushIndices, MountainBrushStorage, MountainBrushWeights, MountainComputeSettings, MountainComputeTextures, MountainComputeUniforms, MountainErosionTrigger, RegenerateMountain, RegenerateShadows
+    prepare_storage, prepare_uniforms, setup_storage, setup_textures, update_erosion_status, update_generate_fbm_status, update_generate_shadow_status, update_prepare_write_status, MountainBrushIndices, MountainBrushStorage, MountainBrushWeights, MountainComputeSettings, MountainComputeTextures, MountainComputeUniforms, MountainErosionTrigger, PrepareWriteCompute, RegenerateMountain, RegenerateShadows
 };
 
-pub const TEXTURE_SIZE: u32 = 1024;
+pub const TEXTURE_SIZE: u32 = 4096;
 pub const WORKGROUP_SIZE: u32 = 8;
 pub const NUM_EROSIONS: u32 = 64;
 
@@ -27,11 +27,13 @@ impl Plugin for MountainComputePlugin {
             .init_resource::<MountainGenerateFBMStatus>()
             .init_resource::<MountainGenerateShadowStatus>()
             .init_resource::<MountainErosionStatus>()
+            .init_resource::<MountainPrepareWriteStatus>()
             .add_event::<RegenerateMountain>()
             .add_event::<RegenerateShadows>()
             .add_event::<MountainErosionTrigger>()
+            .add_event::<PrepareWriteCompute>()
             .add_systems(Startup, (setup_textures, setup_storage))
-            .add_systems(Update, (update_generate_fbm_status, update_erosion_status, update_generate_shadow_status))
+            .add_systems(Update, (update_generate_fbm_status, update_erosion_status, update_generate_shadow_status, update_prepare_write_status))
             .add_plugins((
                 ExtractResourcePlugin::<MountainComputeSettings>::default(),
                 ExtractResourcePlugin::<MountainBrushWeights>::default(),
@@ -39,6 +41,7 @@ impl Plugin for MountainComputePlugin {
                 ExtractResourcePlugin::<MountainComputeTextures>::default(),
                 ExtractResourcePlugin::<MountainGenerateFBMStatus>::default(),
                 ExtractResourcePlugin::<MountainGenerateShadowStatus>::default(),
+                ExtractResourcePlugin::<MountainPrepareWriteStatus>::default(),
                 ExtractResourcePlugin::<MountainErosionStatus>::default(),
             ));
 

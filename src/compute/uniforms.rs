@@ -12,7 +12,7 @@ use bevy::{
     },
 };
 
-use super::{node::{MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus}, TEXTURE_SIZE};
+use super::{node::{MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus, MountainPrepareWriteStatus}, TEXTURE_SIZE};
 
 pub const EROSION_RADIUS: i32 = 3;
 // NOTE: Make sure to change value in shader if this is changed.
@@ -57,14 +57,23 @@ impl Default for  MountainComputeSettings {
         Self {
             map_size: TEXTURE_SIZE,
 
+            // num_octaves: 4,
+            // roughness: 1.4,
+            // lacunarity: 5.0,
+            // persistence: 0.2,
+            // sharpness: 0.0,
+            // offset: 0.0,
+            // strength: 1.0,
+            // center: Vec2::new(0.0, 0.0),
+
             num_octaves: 4,
-            roughness: 1.4,
-            lacunarity: 5.0,
-            persistence: 0.2,
+            roughness: 1.3,
+            lacunarity: 3.0,
+            persistence: 0.15,
             sharpness: 0.0,
             offset: 0.0,
             strength: 1.0,
-            center: Vec2::new(0.0, 0.0),
+            center: Vec2::new(0.5, -0.5),
 
             time: 0.0,
             brush_length: BRUSH_STORAGE_LENGTH,
@@ -135,6 +144,18 @@ pub fn update_generate_shadow_status(
     }
 }
 
+#[derive(Event)]
+pub struct PrepareWriteCompute;
+
+pub fn update_prepare_write_status(
+    mut evr: EventReader<PrepareWriteCompute>,
+    mut status: ResMut<MountainPrepareWriteStatus>,
+) {
+    for _ev in evr.read() {
+        *status = MountainPrepareWriteStatus::Update;
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Event)]
 pub enum MountainErosionTrigger {
@@ -184,7 +205,8 @@ pub fn setup_textures(
         RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
     );
 
-    im.texture_descriptor.usage = TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING;
+    im.texture_descriptor.usage = TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING 
+        | TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_SRC;
     im.sampler = ImageSampler::Descriptor(SamplerDescriptor {
         mag_filter: FilterMode::Linear,
         min_filter: FilterMode::Linear,

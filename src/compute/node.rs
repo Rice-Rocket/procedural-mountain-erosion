@@ -31,6 +31,13 @@ pub enum MountainErosionStatus {
     Wait
 }
 
+#[derive(Resource, ExtractResource, Default, Clone, Copy)]
+pub enum MountainPrepareWriteStatus {
+    Update,
+    #[default]
+    Wait,
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
 pub struct MountainRenderLabel;
 
@@ -39,6 +46,7 @@ pub struct MountainComputeNode {
     generate_shadow: bool,
     generate_fbm: bool,
     enable_erosion: bool,
+    prepare_write: bool,
 }
 
 impl render_graph::Node for MountainComputeNode {
@@ -70,6 +78,19 @@ impl render_graph::Node for MountainComputeNode {
             }
         } else {
             self.generate_shadow = false;
+        }
+
+        let mut prepare_write_status = world.resource_mut::<MountainPrepareWriteStatus>();
+
+        if let MountainPrepareWriteStatus::Update = *prepare_write_status {
+            if self.prepare_write {
+                *prepare_write_status = MountainPrepareWriteStatus::Wait;
+                self.prepare_write = false;
+            } else {
+                self.prepare_write = true;
+            }
+        } else {
+            self.prepare_write = false;
         }
     }
 
@@ -115,6 +136,19 @@ impl render_graph::Node for MountainComputeNode {
                 ]
             );
 
+        let write_bind_group = render_context
+            .render_device()
+            .create_bind_group(
+                Some("mountain_compute_prepare_write_bind_group"),
+                &compute_pipelines.write_layout,
+                &[
+                    BindGroupEntry {
+                        binding: 0,
+                        resource: BindingResource::TextureView(&map.texture_view),
+                    }
+                ]
+            );
+
         let encoder = render_context.command_encoder();
 
         if self.generate_fbm {
@@ -154,6 +188,19 @@ impl render_graph::Node for MountainComputeNode {
 
             pass.set_pipeline(pipeline);
             pass.dispatch_workgroups(NUM_EROSIONS, 1, 1);
+        }
+
+        if self.prepare_write {
+            let mut pass = encoder.begin_compute_pass(&ComputePassDescriptor::default());
+
+            pass.set_bind_group(0, &write_bind_group, &[]);
+
+            let Some(pipeline) = pipeline_cache.get_compute_pipeline(compute_pipelines.write_pipeline) else {
+                return Ok(());
+            };
+
+            pass.set_pipeline(pipeline);
+            pass.dispatch_workgroups(TEXTURE_SIZE / WORKGROUP_SIZE, TEXTURE_SIZE / WORKGROUP_SIZE, 1);
         }
 
         Ok(())

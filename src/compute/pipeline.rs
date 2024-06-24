@@ -12,10 +12,12 @@ use super::uniforms::{MountainBrushIndices, MountainBrushWeights, MountainComput
 #[derive(Resource)]
 pub struct MountainComputePipeline {
     pub layout: BindGroupLayout,
+    pub write_layout: BindGroupLayout,
 
     pub fbm_pipeline: CachedComputePipelineId,
     pub shadow_pipeline: CachedComputePipelineId,
     pub erosion_pipeline: CachedComputePipelineId,
+    pub write_pipeline: CachedComputePipelineId,
 }
 
 impl FromWorld for MountainComputePipeline {
@@ -68,9 +70,26 @@ impl FromWorld for MountainComputePipeline {
             ]
         );
 
+        let write_layout = render_device.create_bind_group_layout(
+            None,
+            &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::COMPUTE,
+                    ty: BindingType::StorageTexture {
+                        access: StorageTextureAccess::ReadWrite,
+                        format: TextureFormat::Rgba32Float,
+                        view_dimension: TextureViewDimension::D2,
+                    },
+                    count: None,
+                }
+            ]
+        );
+
         let asset_server = world.resource::<AssetServer>();
         let height_shader = asset_server.load("shaders/height.wgsl");
         let erosion_shader = asset_server.load("shaders/erosion.wgsl");
+        let write_shader = asset_server.load("shaders/write.wgsl");
 
         let pipeline_cache = world.resource::<PipelineCache>();
 
@@ -87,7 +106,7 @@ impl FromWorld for MountainComputePipeline {
             label: None,
             layout: vec![layout.clone()],
             push_constant_ranges: Vec::new(),
-            shader: height_shader.clone(),
+            shader: height_shader,
             shader_defs: vec![],
             entry_point: "shadow".into(),
         });
@@ -96,16 +115,27 @@ impl FromWorld for MountainComputePipeline {
             label: None,
             layout: vec![layout.clone()],
             push_constant_ranges: Vec::new(),
-            shader: erosion_shader.clone(),
+            shader: erosion_shader,
             shader_defs: vec![],
             entry_point: "erode".into(),
         });
 
+        let write_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: None,
+            layout: vec![write_layout.clone()],
+            push_constant_ranges: Vec::new(),
+            shader: write_shader,
+            shader_defs: vec![],
+            entry_point: "prepare".into(),
+        });
+
         MountainComputePipeline {
             layout,
+            write_layout,
             fbm_pipeline,
             shadow_pipeline,
             erosion_pipeline,
+            write_pipeline,
         }
     }
 }

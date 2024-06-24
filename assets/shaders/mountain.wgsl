@@ -33,8 +33,7 @@ struct MountainRenderSettings {
     pixel_size: f32,
 
     normal_strength: f32,
-
-    _padding: f32,
+    erosion_radius: i32,
 }
 
 
@@ -112,9 +111,17 @@ fn gradient(uv: vec2<f32>) -> vec2<f32> {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
+    let map_size = 1.0 / settings.pixel_size;
+    let coord = uv * map_size;
     let sample = textureSample(map, map_sampler, uv);
     let terrain_height = sample.x;
     var shadow = sample.y;
+
+    if coord.x >= map_size - f32(settings.erosion_radius)
+    || coord.y >= map_size - f32(settings.erosion_radius)
+    || coord.x < f32(settings.erosion_radius) || coord.y < f32(settings.erosion_radius) {
+        discard;
+    }
 
     let grad = gradient(uv);
     let normal = normalize(vec3(grad.x, 1.0, grad.y));

@@ -66,7 +66,7 @@ fn get_height_gradient(pos: vec2<f32>) -> vec3<f32> {
 
 @compute @workgroup_size(1, 64, 1)
 fn erode(@builtin(global_invocation_id) id: vec3<u32>) {
-    var pos = hash23(vec3(vec2<f32>(id.xy), settings.time)) * f32(settings.map_size); // + f32(settings.erosion_radius);
+    var pos = hash23(vec3(vec2<f32>(id.xy), settings.time)) * f32(settings.map_size);
     var dir = vec2(0.0);
     var speed = settings.start_speed;
     var water = settings.start_water;
@@ -105,8 +105,6 @@ fn erode(@builtin(global_invocation_id) id: vec3<u32>) {
             let n3 = textureLoad(map, node + vec2(0, 1));
             let n4 = textureLoad(map, node + vec2(1, 1));
 
-            // storageBarrier();
-
             textureStore(map, node, vec4(n1.x + amount * (1.0 - cell_offset.x) * (1.0 - cell_offset.y), n1.yzw));
             textureStore(map, node + vec2(1, 0), vec4(n2.x + amount * cell_offset.x * (1.0 - cell_offset.y), n2.yzw));
             textureStore(map, node + vec2(0, 1), vec4(n3.x + amount * (1.0 - cell_offset.x) * cell_offset.y, n3.yzw));
@@ -121,10 +119,7 @@ fn erode(@builtin(global_invocation_id) id: vec3<u32>) {
                 let weighted_amount = amount * brush_weights[i];
 
                 let h = textureLoad(map, erode_pos);
-                // let delta_sediment = mix(weighted_amount, h, f32(h < weighted_amount))
                 let delta_sediment = min(weighted_amount, h.x);
-
-                // storageBarrier();
 
                 textureStore(map, erode_pos, vec4(h.x - delta_sediment, h.yzw));
                 sediment += delta_sediment;

@@ -1,6 +1,6 @@
 use bevy::{math::Vec3, reflect::Reflect, render::render_resource::ShaderType};
 
-use crate::material::MountainMaterial;
+use crate::{compute::uniforms::EROSION_RADIUS, material::MountainMaterial};
 
 #[derive(Debug, Clone, Reflect, ShaderType)]
 pub struct MountainRenderSettings {
@@ -10,8 +10,7 @@ pub struct MountainRenderSettings {
     pub pixel_size: f32,
 
     pub normal_strength: f32,
-
-    _padding: f32,
+    pub erosion_radius: i32,
 }
 
 impl Default for MountainRenderSettings {
@@ -23,8 +22,7 @@ impl Default for MountainRenderSettings {
             pixel_size: 0.0,
             
             normal_strength: 0.1,
-
-            _padding: 0.0,
+            erosion_radius: EROSION_RADIUS,
         }
     }
 }
