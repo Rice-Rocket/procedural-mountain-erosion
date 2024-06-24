@@ -1,4 +1,4 @@
-use bevy::{math::Vec3, prelude::{ReflectResource, Resource}, reflect::Reflect, render::render_resource::ShaderType};
+use bevy::{math::Vec3, reflect::Reflect, render::render_resource::ShaderType};
 
 use crate::material::MountainMaterial;
 
@@ -8,6 +8,10 @@ pub struct MountainRenderSettings {
     pub terrain_height: f32,
     pub blend_sharpness: f32,
     pub pixel_size: f32,
+
+    pub normal_strength: f32,
+
+    _padding: f32,
 }
 
 impl Default for MountainRenderSettings {
@@ -17,6 +21,10 @@ impl Default for MountainRenderSettings {
             terrain_height: 60.0,
             blend_sharpness: 10.0,
             pixel_size: 0.0,
+            
+            normal_strength: 10.0,
+
+            _padding: 0.0,
         }
     }
 }

@@ -5,12 +5,12 @@ use bevy::{prelude::*, render::{
 use node::{MountainComputeNode, MountainErosionStatus, MountainGenerateFBMStatus, MountainGenerateShadowStatus, MountainRenderLabel};
 use pipeline::MountainComputePipeline;
 use uniforms::{
-    prepare_storage, prepare_uniforms, setup_storage, setup_textures, update_erosion_status, update_generate_fbm_status, MountainBrushIndices, MountainBrushStorage, MountainBrushWeights, MountainComputeSettings, MountainComputeTextures, MountainComputeUniforms, MountainErosionTrigger, RegenerateMountain, RegenerateShadows
+    prepare_storage, prepare_uniforms, setup_storage, setup_textures, update_erosion_status, update_generate_fbm_status, update_generate_shadow_status, MountainBrushIndices, MountainBrushStorage, MountainBrushWeights, MountainComputeSettings, MountainComputeTextures, MountainComputeUniforms, MountainErosionTrigger, RegenerateMountain, RegenerateShadows
 };
 
 pub const TEXTURE_SIZE: u32 = 4096;
 pub const WORKGROUP_SIZE: u32 = 8;
-pub const NUM_EROSIONS: u32 = 1024;
+pub const NUM_EROSIONS: u32 = 64;
 
 pub mod node;
 pub mod pipeline;
@@ -30,8 +30,8 @@ impl Plugin for MountainComputePlugin {
             .add_event::<RegenerateMountain>()
             .add_event::<RegenerateShadows>()
             .add_event::<MountainErosionTrigger>()
-            .add_systems(Startup, setup_textures)
-            .add_systems(Update, (update_generate_fbm_status, update_erosion_status))
+            .add_systems(Startup, (setup_textures, setup_storage))
+            .add_systems(Update, (update_generate_fbm_status, update_erosion_status, update_generate_shadow_status))
             .add_plugins((
                 ExtractResourcePlugin::<MountainComputeSettings>::default(),
                 ExtractResourcePlugin::<MountainBrushWeights>::default(),
@@ -46,7 +46,6 @@ impl Plugin for MountainComputePlugin {
         render_app
             .init_resource::<MountainComputeUniforms>()
             .init_resource::<MountainBrushStorage>()
-            .add_systems(Startup, setup_textures)
             .add_systems(Render, (prepare_uniforms, prepare_storage).in_set(RenderSet::Prepare));
 
         let mut render_graph = render_app.world.resource_mut::<RenderGraph>();

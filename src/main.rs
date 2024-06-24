@@ -1,9 +1,12 @@
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}};
+use bevy::{prelude::*, render::{mesh::{Indices, PrimitiveTopology}, render_asset::RenderAssetUsages}, window::PresentMode};
+use bevy_inspector_egui::quick::{AssetInspectorPlugin, ResourceInspectorPlugin};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use compute::{uniforms::{MountainErosionTrigger, RegenerateMountain, RegenerateShadows}, MountainComputePlugin};
+use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
+use compute::{uniforms::{MountainComputeSettings, MountainErosionTrigger, RegenerateMountain, RegenerateShadows}, MountainComputePlugin};
 use material::{MountainMaterial, MountainMaterialPlugin};
+use settings::MountainRenderSettings;
 
 mod material;
 mod compute;
@@ -14,10 +17,20 @@ mod settings;
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    present_mode: PresentMode::AutoNoVsync,
+                    ..default()
+                }),
+                ..default()
+            }),
             PanOrbitCameraPlugin,
+            ScreenDiagnosticsPlugin::default(),
+            ScreenFrameDiagnosticsPlugin,
             MountainMaterialPlugin,
             MountainComputePlugin,
+            ResourceInspectorPlugin::<MountainComputeSettings>::default(),
+            AssetInspectorPlugin::<MountainMaterial>::default(),
         ))
 
         // .init_resource::<Rng>()
@@ -88,6 +101,7 @@ fn keybinds(
     }
 
     if keys.just_pressed(KeyCode::KeyE) {
+        println!("toggled erosion");
         erosion_evw.send(MountainErosionTrigger::Toggle);
     }
 }

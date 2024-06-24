@@ -32,10 +32,13 @@ pub struct MountainComputeSettings {
     pub strength: f32,
     pub center: Vec2,
 
+    time: f32,
+    brush_length: u32,
+
     pub sun_direction: Vec3,
-    _padding: f32,
 
     pub max_lifetime: u32,
+    pub erosion_radius: i32,
     pub inertia: f32,
     pub sediment_capacity_factor: f32,
     pub min_sediment_capacity: f32,
@@ -45,6 +48,8 @@ pub struct MountainComputeSettings {
     pub gravity: f32,
     pub start_speed: f32,
     pub start_water: f32,
+    
+    _padding: Vec2,
 }
 
 impl Default for  MountainComputeSettings {
@@ -61,10 +66,13 @@ impl Default for  MountainComputeSettings {
             strength: 1.0,
             center: Vec2::new(0.0, 0.0),
 
+            time: 0.0,
+            brush_length: BRUSH_STORAGE_LENGTH,
+
             sun_direction: Vec3::new(1.0, 4.0, 0.5).normalize(),
-            _padding: 0.0,
 
             max_lifetime: 30,
+            erosion_radius: EROSION_RADIUS,
             inertia: 0.3,
             sediment_capacity_factor: 3.0,
             min_sediment_capacity: 0.01,
@@ -74,6 +82,8 @@ impl Default for  MountainComputeSettings {
             gravity: 4.0,
             start_speed: 1.0,
             start_water: 1.0,
+
+            _padding: Vec2::ZERO,
         }
     }
 }
@@ -88,9 +98,15 @@ pub fn prepare_uniforms(
     general_settings: Res<MountainComputeSettings>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
+    time: Res<Time>,
 ) {
     let general = uniforms.buf.get_mut();
     *general = general_settings.clone();
+
+    general.time = time.elapsed_seconds();
+    if !general.sun_direction.is_normalized() {
+        general.sun_direction = general.sun_direction.normalize();
+    }
 
     uniforms.buf.write_buffer(&render_device, &render_queue);
 }
@@ -185,10 +201,10 @@ pub struct MountainBrushWeights{ pub weights: [f32; BRUSH_STORAGE_LENGTH as usiz
 
 #[derive(Resource, ShaderType, ExtractResource, Reflect, Clone)]
 #[reflect(Resource)]
-pub struct MountainBrushIndices{ pub indices: [i32; BRUSH_STORAGE_LENGTH as usize] }
+pub struct MountainBrushIndices{ pub indices: [[i32; 2]; BRUSH_STORAGE_LENGTH as usize] }
 
 impl Default for MountainBrushWeights { fn default() -> Self { Self { weights: [0.0; BRUSH_STORAGE_LENGTH as usize] } } }
-impl Default for MountainBrushIndices { fn default() -> Self { Self { indices: [0; BRUSH_STORAGE_LENGTH as usize] } } }
+impl Default for MountainBrushIndices { fn default() -> Self { Self { indices: [[0; 2]; BRUSH_STORAGE_LENGTH as usize] } } }
 
 #[derive(Resource, Default)]
 pub struct MountainBrushStorage {
@@ -197,18 +213,55 @@ pub struct MountainBrushStorage {
 }
 
 pub fn setup_storage(
-    mut storage: ResMut<MountainBrushStorage>,
-    settings: Res<MountainComputeSettings>,
+    mut weights_storage: ResMut<MountainBrushWeights>,
+    mut indices_storage: ResMut<MountainBrushIndices>,
 ) {
-    let weights = storage.weights.get_mut();
-    let indices = storage.indices.get_mut();
+    let mut weights = [0.0; BRUSH_STORAGE_LENGTH as usize];
+    let mut indices = [[0; 2]; BRUSH_STORAGE_LENGTH as usize];
+
+    let mut weight_sum = 0.0;
+    let mut i = 0;
+
+    for brush_y in -EROSION_RADIUS..=EROSION_RADIUS {
+        for brush_x in -EROSION_RADIUS..=EROSION_RADIUS {
+            let sqr_dst = brush_x * brush_x + brush_y * brush_y;
+            if sqr_dst < EROSION_RADIUS * EROSION_RADIUS {
+                indices[i] = [brush_x, brush_y];
+                let brush_weight = 1.0 - (sqr_dst as f32).sqrt() / EROSION_RADIUS as f32;
+                weight_sum += brush_weight;
+                weights[i] = brush_weight;
+                i += 1;
+            }
+        }
+    }
+
+    for w in weights.iter_mut() {
+        *w /= weight_sum;
+    }
+
+    weights_storage.weights = weights;
+    indices_storage.indices = indices;
+
+    // let storage_weights = storage.weights.get_mut();
+    // storage_weights.weights = weights;
+    //
+    // let storage_indices = storage.indices.get_mut();
+    // storage_indices.indices = indices;
 }
 
 pub fn prepare_storage(
     mut storage: ResMut<MountainBrushStorage>,
+    storage_weights: Res<MountainBrushWeights>,
+    storage_indices: Res<MountainBrushIndices>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
 ) {
+    let weights = storage.weights.get_mut();
+    *weights = storage_weights.clone();
+
+    let indices = storage.indices.get_mut();
+    *indices = storage_indices.clone();
+
     storage.weights.write_buffer(&render_device, &render_queue);
     storage.indices.write_buffer(&render_device, &render_queue);
 }

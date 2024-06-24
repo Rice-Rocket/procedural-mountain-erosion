@@ -31,6 +31,10 @@ struct MountainRenderSettings {
     terrain_height: f32,
     blend_sharpness: f32,
     pixel_size: f32,
+
+    normal_strength: f32,
+
+    _padding: f32,
 }
 
 
