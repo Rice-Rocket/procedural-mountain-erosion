@@ -107,7 +107,7 @@ fn gradient(uv: vec2<f32>) -> vec2<f32> {
     let west = textureSample(map, map_sampler, uv + vec2(-settings.pixel_size, 0.0)).x;
 
     return vec2((east - west) / (2.0 * settings.pixel_size), (south - north) / (2.0 * settings.pixel_size));
-}
+};
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
@@ -118,12 +118,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let grad = gradient(uv);
     let normal = normalize(vec3(grad.x, 1.0, grad.y));
+    let sun = normalize(settings.sun_direction * vec3(1.0, 1.0 / settings.normal_strength, 1.0));
 
-    shadow = max(shadow, max(dot(normal, settings.sun_direction), 0.0));
+    shadow = max(shadow, max(dot(normal, sun), 0.0));
     shadow = min(shadow, 0.9);
 
     var col = terrain_color(terrain_height, normal);
     col = mix(col, vec3(0.0), shadow);
+
+    col = vec3(max(dot(settings.sun_direction, normal), 0.0));
 
     return vec4(col, 1.0);
 }
